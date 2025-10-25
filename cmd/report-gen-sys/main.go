@@ -11,10 +11,9 @@ func main() {
 	a := app.NewWithID("1")
 
 	fileRepo := files.NewFileRepository()
-	uiManager := ui.NewWindow(a)
 
 	reportService := application.NewReportService(fileRepo)
-
-	uiManager.SetReportService(reportService)
+	window := ui.NewWindow(a, reportService)
+	window.Window.Show()
 	a.Run()
 }
