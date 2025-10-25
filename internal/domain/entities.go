@@ -1,18 +1,18 @@
 package domain
 
 type FileInfo struct {
-	Path    string                 `json:"info"`
-	Content map[string]interface{} `json:"content"`
+	Path string `json:"path"`
 }
 
 type EmplRawData struct {
-	ID          string
-	Name        string // ФИО
-	Email       string
-	PhoneNum    string
-	WorkingTime string // Требуемое рабочее время в формате HH:MM-HH:MM
-	ComingTime  string // Время прихода на работу HH:MM
-	ExitingTime string // Время ухода с работы HH:MM
+	ID          string `json:"ID"`
+	Name        string `json:"Name"` // ФИО
+	Email       string `json:"Email"`
+	PhoneNum    string `json:"PhoneNum"`
+	WorkingTime string `json:"WorkingTime"` // Требуемое рабочее время в формате HH:MM-HH:MM
+	ComingTime  string `json:"ComingTime"`  // Время прихода на работу HH:MM
+	ExitingTime string `json:"ExitingTime"` // Время ухода с работы HH:MM
+	Date        string `json:"-"`           // Дата записи
 }
 
 type EmplCompleteData struct {

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/TimofeyChernyshev/Report-generation-system/internal/application"
 	"github.com/TimofeyChernyshev/Report-generation-system/internal/domain"
 )
 
@@ -13,11 +14,11 @@ import (
 type FileRepositoryImpl struct{}
 
 // NewFileRepository создает новую реализацию FileRepository
-func NewFileRepository() domain.FileRepository {
+func NewFileRepository() application.FileRepository {
 	return &FileRepositoryImpl{}
 }
 
-// Вовзращает все json файлы из дирректории
+// GetFilesInDirectory возвращает все json файлы из дирректории
 func (r *FileRepositoryImpl) GetFilesInDirectory(path string) ([]domain.FileInfo, error) {
 	var files []domain.FileInfo
 
@@ -38,21 +39,30 @@ func (r *FileRepositoryImpl) GetFilesInDirectory(path string) ([]domain.FileInfo
 	return files, nil
 }
 
-func (r *FileRepositoryImpl) LoadJSONFile(path string) (*domain.FileInfo, error) {
+// LoadJSONFile парсит данные из json файла
+func (r *FileRepositoryImpl) LoadFile(path string) ([]domain.EmplRawData, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("error reading file: %w", err)
 	}
 
-	var content map[string]interface{}
-	if err := json.Unmarshal(data, &content); err != nil {
+	var temp []domain.EmplRawData
+	if err := json.Unmarshal(data, &temp); err != nil {
 		return nil, fmt.Errorf("parsing JSON error: %w", err)
 	}
 
-	jsonFile := &domain.FileInfo{
-		Path:    path,
-		Content: content,
+	employees := make([]domain.EmplRawData, len(temp))
+	for i, d := range temp {
+		employees[i] = domain.EmplRawData{
+			ID:          d.ID,
+			Name:        d.Name,
+			Email:       d.Email,
+			PhoneNum:    d.PhoneNum,
+			WorkingTime: d.WorkingTime,
+			ComingTime:  d.ComingTime,
+			ExitingTime: d.ExitingTime,
+		}
 	}
 
-	return jsonFile, nil
+	return employees, nil
 }
