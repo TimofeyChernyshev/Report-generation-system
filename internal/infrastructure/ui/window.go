@@ -45,7 +45,7 @@ func NewWindow(app fyne.App, reportService *application.ReportService) *Window {
 	// Таблица сырых данных о сотрудниках
 	w.rawExamplesTable = widget.NewTable(
 		func() (int, int) {
-			return len(w.rawExamples[w.selectedFile]) + 1, 5
+			return len(w.rawExamples[w.selectedFile]) + 1, 7
 		},
 		func() fyne.CanvasObject {
 			return widget.NewLabel("")
@@ -57,13 +57,17 @@ func NewWindow(app fyne.App, reportService *application.ReportService) *Window {
 				case 0:
 					label.SetText("ID")
 				case 1:
-					label.SetText("Рабочее время")
-				case 2:
-					label.SetText("Приход")
-				case 3:
-					label.SetText("Уход")
-				case 4:
 					label.SetText("ФИО")
+				case 2:
+					label.SetText("Рабочее время")
+				case 3:
+					label.SetText("Приход")
+				case 4:
+					label.SetText("Уход")
+				case 5:
+					label.SetText("Почта")
+				case 6:
+					label.SetText("Телефон")
 				}
 				return
 			}
@@ -72,21 +76,27 @@ func NewWindow(app fyne.App, reportService *application.ReportService) *Window {
 			case 0:
 				label.SetText(data.ID)
 			case 1:
-				label.SetText(data.WorkingTime)
-			case 2:
-				label.SetText(data.ComingTime)
-			case 3:
-				label.SetText(data.ExitingTime)
-			case 4:
 				label.SetText(data.Name)
+			case 2:
+				label.SetText(data.WorkingTime)
+			case 3:
+				label.SetText(data.ComingTime)
+			case 4:
+				label.SetText(data.ExitingTime)
+			case 5:
+				label.SetText(data.Email)
+			case 6:
+				label.SetText(data.PhoneNum)
 			}
 		},
 	)
 	w.rawExamplesTable.SetColumnWidth(0, 80)
-	w.rawExamplesTable.SetColumnWidth(1, 120)
-	w.rawExamplesTable.SetColumnWidth(2, 100)
+	w.rawExamplesTable.SetColumnWidth(1, 200)
+	w.rawExamplesTable.SetColumnWidth(2, 120)
 	w.rawExamplesTable.SetColumnWidth(3, 100)
-	w.rawExamplesTable.SetColumnWidth(4, 200)
+	w.rawExamplesTable.SetColumnWidth(4, 100)
+	w.rawExamplesTable.SetColumnWidth(5, 200)
+	w.rawExamplesTable.SetColumnWidth(6, 120)
 
 	w.rawExamplesTable.Hide()
 
