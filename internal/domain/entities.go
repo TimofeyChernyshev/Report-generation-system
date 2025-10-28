@@ -20,7 +20,15 @@ type EmplCompleteData struct {
 	Name          string
 	Email         string
 	PhoneNum      string
-	WorkedTime    string // Отработанное за месяц время
-	LateComeTime  string // Общее время опозданий
-	EarlyExitTime string // Общее время ранних уходов
+	WorkedTime    float64 // Отработанное за месяц время в часах
+	LateComeTime  float64 // Общее время опозданий в часах
+	EarlyExitTime float64 // Общее время ранних уходов в часах
+	DailyMarks    []Mark  // Ежедневные отметки по пользователю
+}
+
+type Mark struct {
+	WorkingTime string
+	ComingTime  string
+	ExitingTime string
+	Date        string
 }

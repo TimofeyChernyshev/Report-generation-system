@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"sort"
 
 	"github.com/TimofeyChernyshev/Report-generation-system/internal/domain"
 )
@@ -53,10 +54,77 @@ func (s *ReportService) ImportAndValidateFiles(files []domain.FileInfo) (map[str
 
 	for date, data := range records {
 		records[date], errs = validateAndNormalizeEmplData(data)
+		record := records[date]
+		for i := range record {
+			record[i].Date = date
+		}
+		records[date] = record
+
 		if len(errs) != 0 {
 			return nil, errs
 		}
 	}
 
 	return records, nil
+}
+
+// CalculateTime проводит все расчеты по сотрудникам
+func (s *ReportService) CalculateTime(rawData map[string][]domain.EmplRawData, selectedDates map[string]bool) map[string]domain.EmplCompleteData {
+	var dates []string
+	for date := range selectedDates {
+		dates = append(dates, date)
+	}
+	sort.Strings(dates)
+
+	// ключ - ID сотрудника, значение - его рассчитанные данные
+	calculated := make(map[string]domain.EmplCompleteData)
+	for _, records := range rawData {
+		for _, record := range records {
+			if _, exists := calculated[record.ID]; !exists {
+				employee := domain.NewEmplCompleteData(record)
+				employee.DailyMarks = make([]domain.Mark, len(dates))
+				for i, date := range dates {
+					employee.DailyMarks[i] = domain.Mark{
+						WorkingTime: "",
+						ComingTime:  "",
+						ExitingTime: "",
+						Date:        date,
+					}
+				}
+				calculated[record.ID] = employee
+			}
+		}
+	}
+
+	for _, records := range rawData {
+		for _, record := range records {
+			employee := calculated[record.ID]
+
+			for i, mark := range employee.DailyMarks {
+				if mark.Date == record.Date {
+					employee.DailyMarks[i] = domain.Mark{
+						WorkingTime: record.WorkingTime,
+						ComingTime:  record.ComingTime,
+						ExitingTime: record.ExitingTime,
+						Date:        record.Date,
+					}
+				}
+			}
+
+			if record.ComingTime == "" && record.ExitingTime != "" {
+				record.ComingTime = record.WorkingTime[:5]
+			}
+			if record.ExitingTime == "" && record.ComingTime != "" {
+				record.ExitingTime = record.WorkingTime[6:]
+			}
+
+			employee.WorkedTime += record.CalculateWorkedTime()
+			employee.LateComeTime += record.CalculateLateComeTime()
+			employee.EarlyExitTime += record.CalculateEarlyExitTime()
+
+			calculated[record.ID] = employee
+		}
+	}
+
+	return calculated
 }
