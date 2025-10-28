@@ -16,6 +16,7 @@ var (
 var (
 	errEmptyID         error = errors.New("empty ID")
 	errWrongTimeFormat error = errors.New("wrong time format")
+	errExitBeforeCome  error = errors.New("exiting time before coming time")
 )
 
 // Проверяет корректность данных о сотрудниках и объединяет разрозненные записи в одну
@@ -35,6 +36,11 @@ func validateAndNormalizeEmplData(data []domain.EmplRawData) ([]domain.EmplRawDa
 		}
 		if e.ExitingTime != "" && !isValidTime(e.ExitingTime) {
 			errs = append(errs, fmt.Errorf("record %d: %w: exiting time '%s'", i, errWrongTimeFormat, e.ExitingTime))
+		}
+		come, _ := time.Parse("15:04", e.ComingTime)
+		exit, _ := time.Parse("15:04", e.ExitingTime)
+		if e.ComingTime != "" && e.ExitingTime != "" && come.After(exit) {
+			errs = append(errs, fmt.Errorf("record: %d: %w", i, errExitBeforeCome))
 		}
 
 		// Проверка требуемого рабочего диапазона
