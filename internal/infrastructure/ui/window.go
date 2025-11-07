@@ -31,6 +31,8 @@ type Window struct {
 	completeDataTable *widget.Table
 	completeData      map[string]domain.EmplCompleteData
 	dataSlice         []domain.EmplCompleteData
+
+	exportBtn *widget.Button
 }
 
 // NewWindowManager создает новый экземпляр Window
@@ -51,12 +53,14 @@ func NewWindow(app fyne.App, reportService *application.ReportService) *Window {
 	scrollComplete := container.NewVScroll(w.completeDataTable)
 	scrollComplete.SetMinSize(fyne.NewSize(600, 10*25))
 
-	tableContainer := container.NewMax(scrollRaw)
+	tableContainer := container.NewStack(scrollRaw)
 
 	// Кнопки в системе
 	selectFolderBtn := widget.NewButton("Выбрать папку", w.handleSelectFolder)
 	w.calculateTimeBtn = widget.NewButton("Рассчитать время", w.handleCalculateTime)
 	w.calculateTimeBtn.Hide()
+	w.exportBtn = widget.NewButton("Экспортировать", w.handleExport)
+	w.exportBtn.Hide()
 
 	w.disclaimer = widget.NewLabel("Если отсутствует время прихода или ухода, то будет использовано время из требуемого рабочего диапазона")
 	w.disclaimer.Hide()
@@ -66,6 +70,7 @@ func NewWindow(app fyne.App, reportService *application.ReportService) *Window {
 		w.disclaimer,
 		w.fileList,
 		tableContainer,
+		w.exportBtn,
 	)
 
 	w.Window.SetContent(content)
@@ -189,18 +194,25 @@ func (w *Window) createCompleteDataTable() {
 			switch id.Col {
 			case 0:
 				label.SetText(data.ID)
+				w.completeDataTable.SetColumnWidth(id.Col, 80)
 			case 1:
 				label.SetText(data.Name)
+				w.completeDataTable.SetColumnWidth(id.Col, 200)
 			case 2:
 				label.SetText(data.Email)
+				w.completeDataTable.SetColumnWidth(id.Col, 200)
 			case 3:
 				label.SetText(data.PhoneNum)
+				w.completeDataTable.SetColumnWidth(id.Col, 120)
 			case 4:
 				label.SetText(strconv.FormatFloat(data.WorkedTime, 'f', 2, 64))
+				w.completeDataTable.SetColumnWidth(id.Col, 200)
 			case 5:
 				label.SetText(strconv.FormatFloat(data.LateComeTime, 'f', 2, 64))
+				w.completeDataTable.SetColumnWidth(id.Col, 200)
 			case 6:
 				label.SetText(strconv.FormatFloat(data.EarlyExitTime, 'f', 2, 64))
+				w.completeDataTable.SetColumnWidth(id.Col, 200)
 			default:
 				mark := data.DailyMarks[id.Col-7]
 				if mark.WorkingTime == "" && mark.ComingTime == "" && mark.ExitingTime == "" {
@@ -208,19 +220,10 @@ func (w *Window) createCompleteDataTable() {
 				} else {
 					label.SetText(mark.WorkingTime + "\n" + mark.ComingTime + "-" + mark.ExitingTime)
 				}
+				w.completeDataTable.SetColumnWidth(id.Col, 120)
 			}
 		},
 	)
-	w.completeDataTable.SetColumnWidth(0, 80)
-	w.completeDataTable.SetColumnWidth(1, 200)
-	w.completeDataTable.SetColumnWidth(2, 200)
-	w.completeDataTable.SetColumnWidth(3, 120)
-	w.completeDataTable.SetColumnWidth(4, 200)
-	w.completeDataTable.SetColumnWidth(5, 200)
-	w.completeDataTable.SetColumnWidth(6, 200)
-	for i := 0; i < 31; i++ {
-		w.completeDataTable.SetColumnWidth(i+7, 120)
-	}
 
 	w.completeDataTable.Hide()
 }

@@ -1,9 +1,11 @@
 package ui
 
 import (
+	"errors"
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -20,6 +22,7 @@ func (w *Window) handleSelectFolder() {
 	w.completeDataTable.Hide()
 	w.disclaimer.Hide()
 	w.fileList.Hide()
+	w.exportBtn.Hide()
 
 	dialog.NewFolderOpen(func(uri fyne.ListableURI, err error) {
 		if err != nil {
@@ -127,6 +130,7 @@ func (w *Window) handleCalculateTime() {
 			return w.dataSlice[i].Name < w.dataSlice[j].Name
 		})
 		w.showCompleteDataTable()
+		w.exportBtn.Show()
 		d.Dismiss()
 	})
 
@@ -197,4 +201,33 @@ func (w *Window) createCalendar(grid *fyne.Container, month time.Time, selectedD
 		grid.Add(dayBtn)
 	}
 	grid.Refresh()
+}
+
+func (w *Window) handleExport() {
+	dialogSave := NewFileSave(func(writer fyne.URIWriteCloser, err error) {
+		if err != nil {
+			dialog.ShowError(err, w.Window)
+			return
+		}
+		if writer == nil {
+			return
+		}
+		defer writer.Close()
+
+		fileURI := writer.URI()
+		if fileURI == nil {
+			dialog.ShowError(errors.New("cannot get file URI"), w.Window)
+			return
+		}
+		fileName := fileURI.Name()
+		fileExt := strings.ToLower(filepath.Ext(fileName))
+
+		exportErr := w.reportService.Export(fileExt, w.dataSlice, writer)
+		if exportErr != nil {
+			dialog.ShowError(exportErr, w.Window)
+			return
+		}
+	}, w.Window)
+
+	dialogSave.Show()
 }

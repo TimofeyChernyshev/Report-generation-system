@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"sort"
 
+	"fyne.io/fyne/v2"
 	"github.com/TimofeyChernyshev/Report-generation-system/internal/domain"
 )
 
@@ -15,13 +16,14 @@ var (
 
 // ReportService представляет систему создания отчетов посещаемости
 type ReportService struct {
-	fileRepo FileRepository
+	fileRepo  FileRepository
+	exporters map[string]Exporter
 }
 
 // NewReportService создает новый экземпляр ReportService
-func NewReportService(fileRepo FileRepository) *ReportService {
+func NewReportService(fileRepo FileRepository, exporters map[string]Exporter) *ReportService {
 	return &ReportService{
-		fileRepo: fileRepo,
+		fileRepo: fileRepo, exporters: exporters,
 	}
 }
 
@@ -127,4 +129,12 @@ func (s *ReportService) CalculateTime(rawData map[string][]domain.EmplRawData, s
 	}
 
 	return calculated
+}
+
+func (s *ReportService) Export(ext string, data []domain.EmplCompleteData, writer fyne.URIWriteCloser) error {
+	exporter, ok := s.exporters[ext]
+	if !ok {
+		return fmt.Errorf("format %s unsupported", ext)
+	}
+	return exporter.Export(data, writer)
 }
