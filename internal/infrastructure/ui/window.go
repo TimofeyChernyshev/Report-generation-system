@@ -3,6 +3,7 @@ package ui
 import (
 	"sort"
 	"strconv"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -22,7 +23,7 @@ type Window struct {
 	currentFiles        []domain.FileInfo
 
 	rawDataTable *widget.Table
-	rawData      map[string][]domain.EmplRawData
+	rawData      map[time.Time][]domain.EmplRawData
 	selectedFile string
 
 	calculateTimeBtn *widget.Button
@@ -91,18 +92,33 @@ func (w *Window) createFileList() {
 	)
 }
 
+func (w *Window) parseFileName() time.Time {
+	layouts := []string{"2006-01-02", "02.01.2006"}
+	var fileDate time.Time
+	var err error
+	for _, l := range layouts {
+		fileDate, err = time.Parse(l, w.selectedFile)
+		if err == nil {
+			break
+		}
+	}
+	return fileDate
+}
+
 // Таблица сырых данных о сотрудниках
 func (w *Window) createRawDataTable() {
 	w.rawDataTable = widget.NewTable(
 		func() (int, int) {
-			return len(w.rawData[w.selectedFile]) + 1, 7
+			date := w.parseFileName()
+			return len(w.rawData[date]) + 1, 7
 		},
 		func() fyne.CanvasObject {
 			return widget.NewLabel("")
 		},
 		func(id widget.TableCellID, cell fyne.CanvasObject) {
-			sort.Slice(w.rawData[w.selectedFile], func(i, j int) bool {
-				return w.rawData[w.selectedFile][i].Name < w.rawData[w.selectedFile][j].Name
+			date := w.parseFileName()
+			sort.Slice(w.rawData[date], func(i, j int) bool {
+				return w.rawData[date][i].Name < w.rawData[date][j].Name
 			})
 			label := cell.(*widget.Label)
 			if id.Row == 0 {
@@ -124,7 +140,7 @@ func (w *Window) createRawDataTable() {
 				}
 				return
 			}
-			data := w.rawData[w.selectedFile][id.Row-1]
+			data := w.rawData[date][id.Row-1]
 			switch id.Col {
 			case 0:
 				label.SetText(data.ID)
@@ -185,7 +201,7 @@ func (w *Window) createCompleteDataTable() {
 				case 6:
 					label.SetText("Ранние уходы, ч")
 				default:
-					label.SetText(w.dataSlice[id.Row].DailyMarks[id.Col-7].Date)
+					label.SetText((w.dataSlice[id.Row].DailyMarks[id.Col-7].Date).Format("02.01.2006"))
 				}
 				return
 			}

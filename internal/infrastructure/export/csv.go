@@ -20,7 +20,7 @@ func (e CSVExporter) Export(data []domain.EmplCompleteData, writer fyne.URIWrite
 
 	row := []string{"ID", "ФИО", "Email", "Телефон", "Отработано (ч)", "Поздние приходы (ч)", "Ранние уходы (ч)"}
 	for _, d := range data[0].DailyMarks {
-		row = append(row, d.Date)
+		row = append(row, d.Date.Format("02.01.2006"))
 	}
 	if err := w.Write(row); err != nil {
 		return err

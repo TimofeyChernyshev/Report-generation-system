@@ -11,7 +11,8 @@ import (
 )
 
 var (
-	errIncorrectFile error = errors.New("no correct data in provided files")
+	errIncorrectFile     error = errors.New("no correct data in provided files")
+	errDateInWrongFormat error = errors.New("date must match the format YYYY-MM-DD or DD.MM.YYYY")
 )
 
 // ReportService представляет систему создания отчетов посещаемости
@@ -32,10 +33,12 @@ func (s *ReportService) GetJSONFilesFromFolder(folderPath string) ([]domain.File
 }
 
 // ImportAndValidateFiles открывает все файлы и проверяет валидность записей в них
-func (s *ReportService) ImportAndValidateFiles(files []domain.FileInfo) (map[string][]domain.EmplRawData, []error) {
+func (s *ReportService) ImportAndValidateFiles(files []domain.FileInfo) (map[time.Time][]domain.EmplRawData, []error) {
 	var errs []error
 	// ключ - дата из названия файла, значение - все записи из файла
-	var records = make(map[string][]domain.EmplRawData)
+	var records = make(map[time.Time][]domain.EmplRawData)
+
+	layouts := []string{"2006-01-02", "02.01.2006"}
 
 	for _, file := range files {
 		data, err := s.fileRepo.LoadFile(file.Path)
@@ -47,10 +50,24 @@ func (s *ReportService) ImportAndValidateFiles(files []domain.FileInfo) (map[str
 		fileBase := filepath.Base(file.Path)
 		fileExt := filepath.Ext(file.Path)
 		fileName := fileBase[:len(fileBase)-len(fileExt)]
-		records[fileName] = data
+		var d time.Time
+		for _, l := range layouts {
+			d, err = time.Parse(l, fileName)
+			if err == nil {
+				break
+			}
+		}
+		if err != nil {
+			errs = append(errs, fmt.Errorf("%w: %s", errDateInWrongFormat, fileName))
+			continue
+		}
+		records[d] = data
 	}
 	if len(records) == 0 {
 		errs = append(errs, errIncorrectFile)
+		return nil, errs
+	}
+	if len(errs) != 0 {
 		return nil, errs
 	}
 
@@ -71,12 +88,14 @@ func (s *ReportService) ImportAndValidateFiles(files []domain.FileInfo) (map[str
 }
 
 // CalculateTime проводит все расчеты по сотрудникам
-func (s *ReportService) CalculateTime(rawData map[string][]domain.EmplRawData, selectedDates map[string]bool) map[string]domain.EmplCompleteData {
-	var dates []string
+func (s *ReportService) CalculateTime(rawData map[time.Time][]domain.EmplRawData, selectedDates map[time.Time]bool) map[string]domain.EmplCompleteData {
+	var dates []time.Time
 	for date := range selectedDates {
 		dates = append(dates, date)
 	}
-	sort.Strings(dates)
+	sort.Slice(dates, func(i, j int) bool {
+		return dates[i].Before(dates[j])
+	})
 
 	// ключ - ID сотрудника, значение - его рассчитанные данные
 	calculated := make(map[string]domain.EmplCompleteData)
@@ -103,7 +122,9 @@ func (s *ReportService) CalculateTime(rawData map[string][]domain.EmplRawData, s
 			employee := calculated[record.ID]
 
 			for i, mark := range employee.DailyMarks {
-				if mark.Date == record.Date {
+				yM, mM, dM := mark.Date.Date()
+				yR, mR, dR := record.Date.Date()
+				if yM == yR && mM == mR && dM == dR {
 					employee.DailyMarks[i] = domain.Mark{
 						WorkingTime: record.WorkingTime,
 						ComingTime:  record.ComingTime,

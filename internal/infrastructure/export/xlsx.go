@@ -28,7 +28,7 @@ func (e XlsxExporter) Export(data []domain.EmplCompleteData, writer fyne.URIWrit
 	}
 	startDynamicCol := len(headers) + 1
 	for _, d := range data[0].DailyMarks {
-		headers = append(headers, d.Date)
+		headers = append(headers, d.Date.Format("02.01.2006"))
 	}
 
 	for col, h := range headers {

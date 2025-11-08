@@ -79,7 +79,7 @@ func (w *Window) handleCalculateTime() {
 
 	var d dialog.Dialog
 
-	selectedDates := make(map[string]bool)
+	selectedDates := make(map[time.Time]bool)
 
 	// Календарь для выбора дат
 	currentMonth := time.Now()
@@ -115,7 +115,7 @@ func (w *Window) handleCalculateTime() {
 
 	// Кнопка очистки выбора
 	clearSelectionBtn := widget.NewButton("Очистить выбор", func() {
-		selectedDates = make(map[string]bool)
+		selectedDates = make(map[time.Time]bool)
 		updateCalendar(currentMonth)
 	})
 
@@ -155,7 +155,7 @@ func (w *Window) handleCalculateTime() {
 }
 
 // Создает новый календарь для месяца
-func (w *Window) createCalendar(grid *fyne.Container, month time.Time, selectedDates map[string]bool) {
+func (w *Window) createCalendar(grid *fyne.Container, month time.Time, selectedDates map[time.Time]bool) {
 	grid.Objects = nil
 
 	// Заголовки дней недели
@@ -180,19 +180,17 @@ func (w *Window) createCalendar(grid *fyne.Container, month time.Time, selectedD
 
 	// Дни месяца
 	for d := firstDay; d.Compare(lastDay) <= 0; d = d.AddDate(0, 0, 1) {
-		dateStr := d.Format("02.01.2006")
-
 		dayBtn := widget.NewButton(strconv.Itoa(d.Day()), nil)
-		if selectedDates[dateStr] {
+		if selectedDates[d] {
 			dayBtn.Importance = widget.HighImportance
 		}
 
 		dayBtn.OnTapped = func() {
-			if selectedDates[dateStr] {
-				delete(selectedDates, dateStr)
+			if selectedDates[d] {
+				delete(selectedDates, d)
 				dayBtn.Importance = widget.MediumImportance
 			} else {
-				selectedDates[dateStr] = true
+				selectedDates[d] = true
 				dayBtn.Importance = widget.HighImportance
 			}
 			dayBtn.Refresh()
