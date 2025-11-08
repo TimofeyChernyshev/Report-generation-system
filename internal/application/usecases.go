@@ -5,14 +5,16 @@ import (
 	"fmt"
 	"path/filepath"
 	"sort"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"github.com/TimofeyChernyshev/Report-generation-system/internal/domain"
 )
 
 var (
-	errIncorrectFile     error = errors.New("no correct data in provided files")
-	errDateInWrongFormat error = errors.New("date must match the format YYYY-MM-DD or DD.MM.YYYY")
+	errIncorrectFile       error = errors.New("no correct data in provided files")
+	errDateInWrongFormat   error = errors.New("date must match the format YYYY-MM-DD or DD.MM.YYYY")
+	errFilesDifferentMonth error = errors.New("files with different month or years must contains in different folders")
 )
 
 // ReportService представляет систему создания отчетов посещаемости
@@ -39,6 +41,7 @@ func (s *ReportService) ImportAndValidateFiles(files []domain.FileInfo) (map[tim
 	var records = make(map[time.Time][]domain.EmplRawData)
 
 	layouts := []string{"2006-01-02", "02.01.2006"}
+	var monthAndYear time.Time
 
 	for _, file := range files {
 		data, err := s.fileRepo.LoadFile(file.Path)
@@ -54,6 +57,14 @@ func (s *ReportService) ImportAndValidateFiles(files []domain.FileInfo) (map[tim
 		for _, l := range layouts {
 			d, err = time.Parse(l, fileName)
 			if err == nil {
+				dY, dM, _ := d.Date()
+				if monthAndYear.IsZero() {
+					monthAndYear = time.Date(dY, dM, 1, 0, 0, 0, 0, time.UTC)
+				}
+				if monthAndYear.Year() != dY || monthAndYear.Month() != dM {
+					errs = append(errs, errFilesDifferentMonth)
+					return nil, errs
+				}
 				break
 			}
 		}
@@ -117,7 +128,7 @@ func (s *ReportService) CalculateTime(rawData map[time.Time][]domain.EmplRawData
 		}
 	}
 
-	for _, records := range rawData {
+	for date, records := range rawData {
 		for _, record := range records {
 			employee := calculated[record.ID]
 
@@ -144,6 +155,8 @@ func (s *ReportService) CalculateTime(rawData map[time.Time][]domain.EmplRawData
 			employee.WorkedTime += record.CalculateWorkedTime()
 			employee.LateComeTime += record.CalculateLateComeTime()
 			employee.EarlyExitTime += record.CalculateEarlyExitTime()
+			employee.YearAndMonth = time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, time.UTC)
+			fmt.Println(employee.YearAndMonth)
 
 			calculated[record.ID] = employee
 		}
