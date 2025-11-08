@@ -225,6 +225,11 @@ func (w *Window) handleExport() {
 			dialog.ShowError(exportErr, w.Window)
 			return
 		}
+		savingToBDErr := w.reportService.SaveReportResults(w.dataSlice)
+		if savingToBDErr != nil {
+			dialog.ShowError(savingToBDErr, w.Window)
+			return
+		}
 	}, w.Window)
 
 	dialogSave.Show()

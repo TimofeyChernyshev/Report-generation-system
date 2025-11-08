@@ -9,6 +9,9 @@ import (
 
 	"fyne.io/fyne/v2"
 	"github.com/TimofeyChernyshev/Report-generation-system/internal/domain"
+	database "github.com/TimofeyChernyshev/Report-generation-system/internal/infrastructure/db"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 var (
@@ -21,12 +24,13 @@ var (
 type ReportService struct {
 	fileRepo  FileRepository
 	exporters map[string]Exporter
+	db        *gorm.DB
 }
 
 // NewReportService создает новый экземпляр ReportService
-func NewReportService(fileRepo FileRepository, exporters map[string]Exporter) *ReportService {
+func NewReportService(fileRepo FileRepository, exporters map[string]Exporter, db *gorm.DB) *ReportService {
 	return &ReportService{
-		fileRepo: fileRepo, exporters: exporters,
+		fileRepo: fileRepo, exporters: exporters, db: db,
 	}
 }
 
@@ -156,7 +160,6 @@ func (s *ReportService) CalculateTime(rawData map[time.Time][]domain.EmplRawData
 			employee.LateComeTime += record.CalculateLateComeTime()
 			employee.EarlyExitTime += record.CalculateEarlyExitTime()
 			employee.YearAndMonth = time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, time.UTC)
-			fmt.Println(employee.YearAndMonth)
 
 			calculated[record.ID] = employee
 		}
@@ -171,4 +174,53 @@ func (s *ReportService) Export(ext string, data []domain.EmplCompleteData, write
 		return fmt.Errorf("format %s unsupported", ext)
 	}
 	return exporter.Export(data, writer)
+}
+
+func (s *ReportService) SaveReportResults(data []domain.EmplCompleteData) error {
+	year, mon := data[0].YearAndMonth.Year(), int(data[0].YearAndMonth.Month())
+
+	for _, emp := range data {
+		// Сохранить / обновить сотрудника
+		var employee database.Employee
+		s.db.Where("id = ?", emp.ID).First(&employee)
+		employee.ID = emp.ID // если новый — создаст
+		employee.FullName = emp.Name
+		employee.Email = emp.Email
+		employee.Phone = emp.PhoneNum
+		s.db.Save(&employee)
+
+		// Сохранить / обновить месяц
+		monthModel := database.MonthlyData{
+			EmployeeID:     employee.ID,
+			Year:           year,
+			Month:          mon,
+			WorkedHours:    emp.WorkedTime,
+			LateHours:      emp.LateComeTime,
+			EarlyExitHours: emp.EarlyExitTime,
+			UniqueKey:      fmt.Sprintf("%s_%d_%d", employee.ID, year, mon),
+		}
+		s.db.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "unique_key"}},
+			DoUpdates: clause.AssignmentColumns([]string{"worked_hours", "late_hours", "early_exit_hours"}),
+		}).Create(&monthModel)
+
+		// Сохранить / обновить ежедневные отметки
+		for _, d := range emp.DailyMarks {
+			daily := database.DailyMark{
+				EmployeeID: employee.ID,
+				Date:       d.Date,
+				WorkHours:  d.WorkingTime,
+				ComeTime:   d.ComingTime,
+				ExitTime:   d.ExitingTime,
+				UniqueKey:  fmt.Sprintf("%s_%s", employee.ID, d.Date),
+			}
+
+			s.db.Clauses(clause.OnConflict{
+				Columns:   []clause.Column{{Name: "unique_key"}},
+				DoUpdates: clause.AssignmentColumns([]string{"work_hours", "come_time", "exit_time"}),
+			}).Create(&daily)
+		}
+	}
+
+	return nil
 }
