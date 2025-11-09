@@ -13,6 +13,7 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
+	"github.com/TimofeyChernyshev/Report-generation-system/internal/domain"
 )
 
 // Обработчик кнопки выбора папки
@@ -129,6 +130,11 @@ func (w *Window) handleCalculateTime() {
 		sort.Slice(w.dataSlice, func(i, j int) bool {
 			return w.dataSlice[i].Name < w.dataSlice[j].Name
 		})
+		w.filteredDataSlice = make([]domain.EmplCompleteData, len(w.dataSlice))
+		for i := range w.dataSlice {
+			w.filteredDataSlice[i] = w.dataSlice[i]
+			w.filteredDataSlice[i].DailyMarks = append([]domain.Mark(nil), w.dataSlice[i].DailyMarks...)
+		}
 		w.showCompleteDataTable()
 		w.exportBtn.Show()
 		d.Dismiss()

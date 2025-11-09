@@ -32,6 +32,7 @@ type Window struct {
 	completeDataTable *widget.Table
 	completeData      map[string]domain.EmplCompleteData
 	dataSlice         []domain.EmplCompleteData
+	filteredDataSlice []domain.EmplCompleteData
 
 	exportBtn *widget.Button
 }
@@ -174,38 +175,55 @@ func (w *Window) createRawDataTable() {
 func (w *Window) createCompleteDataTable() {
 	w.completeDataTable = widget.NewTable(
 		func() (int, int) {
-			if w.dataSlice == nil {
+			if w.filteredDataSlice == nil {
 				return 1, 7
 			}
-			return len(w.dataSlice) + 1, 7 + len(w.dataSlice[0].DailyMarks)
+			return len(w.filteredDataSlice) + 1, 7 + len(w.dataSlice[0].DailyMarks)
 		},
 		func() fyne.CanvasObject {
-			return widget.NewLabel("")
+			lbl := widget.NewLabel("")
+			btn := widget.NewButton("▼", nil)
+			btn.Hide()
+			return container.NewBorder(nil, nil, nil, btn, lbl)
 		},
 		func(id widget.TableCellID, cell fyne.CanvasObject) {
-			label := cell.(*widget.Label)
+			c := cell.(*fyne.Container)
+			label := c.Objects[0].(*widget.Label)
+			button := c.Objects[1].(*widget.Button)
+			button.OnTapped = func() {
+				w.showFilterMenu(id.Col)
+			}
 			if id.Row == 0 {
 				switch id.Col {
 				case 0:
 					label.SetText("ID")
+					button.Show()
 				case 1:
 					label.SetText("ФИО")
+					button.Show()
 				case 2:
 					label.SetText("Почта")
+					button.Show()
 				case 3:
 					label.SetText("Телефон")
+					button.Show()
 				case 4:
 					label.SetText("Отработанное время, ч")
+					button.Show()
 				case 5:
 					label.SetText("Опоздания, ч")
+					button.Show()
 				case 6:
 					label.SetText("Ранние уходы, ч")
+					button.Show()
 				default:
-					label.SetText((w.dataSlice[id.Row].DailyMarks[id.Col-7].Date).Format("02.01.2006"))
+					label.SetText((w.filteredDataSlice[id.Row].DailyMarks[id.Col-7].Date).Format("02.01.2006"))
 				}
 				return
 			}
-			data := w.dataSlice[id.Row-1]
+
+			button.Hide()
+			data := w.filteredDataSlice[id.Row-1]
 			w.completeDataTable.SetRowHeight(id.Row, 50)
 			switch id.Col {
 			case 0:
@@ -222,13 +240,13 @@ func (w *Window) createCompleteDataTable() {
 				w.completeDataTable.SetColumnWidth(id.Col, 120)
 			case 4:
 				label.SetText(strconv.FormatFloat(data.WorkedTime, 'f', 2, 64))
-				w.completeDataTable.SetColumnWidth(id.Col, 200)
+				w.completeDataTable.SetColumnWidth(id.Col, 210)
 			case 5:
 				label.SetText(strconv.FormatFloat(data.LateComeTime, 'f', 2, 64))
-				w.completeDataTable.SetColumnWidth(id.Col, 200)
+				w.completeDataTable.SetColumnWidth(id.Col, 150)
 			case 6:
 				label.SetText(strconv.FormatFloat(data.EarlyExitTime, 'f', 2, 64))
-				w.completeDataTable.SetColumnWidth(id.Col, 200)
+				w.completeDataTable.SetColumnWidth(id.Col, 160)
 			default:
 				mark := data.DailyMarks[id.Col-7]
 				if mark.WorkingTime == "" && mark.ComingTime == "" && mark.ExitingTime == "" {
