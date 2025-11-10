@@ -17,9 +17,6 @@ type MonthlyData struct {
 	WorkedHours    float64
 	LateHours      float64
 	EarlyExitHours float64
-
-	// Уникальность по сотруднику + месяц
-	UniqueKey string `gorm:"uniqueIndex"`
 }
 
 type DailyMark struct {
@@ -29,7 +26,4 @@ type DailyMark struct {
 	WorkHours  string
 	ComeTime   string
 	ExitTime   string
-
-	// Уникальность по сотруднику + дате
-	UniqueKey string `gorm:"uniqueIndex"`
 }

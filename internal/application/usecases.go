@@ -11,7 +11,6 @@ import (
 	"github.com/TimofeyChernyshev/Report-generation-system/internal/domain"
 	database "github.com/TimofeyChernyshev/Report-generation-system/internal/infrastructure/db"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 var (
@@ -176,18 +175,18 @@ func (s *ReportService) Export(ext string, data []domain.EmplCompleteData, write
 	return exporter.Export(data, writer)
 }
 
-func (s *ReportService) SaveReportResults(data []domain.EmplCompleteData) error {
+func (s *ReportService) SaveReportResults(data []domain.EmplCompleteData) {
 	year, mon := data[0].YearAndMonth.Year(), int(data[0].YearAndMonth.Month())
 
 	for _, emp := range data {
 		// Сохранить / обновить сотрудника
-		var employee database.Employee
-		s.db.Where("id = ?", emp.ID).First(&employee)
-		employee.ID = emp.ID // если новый — создаст
-		employee.FullName = emp.Name
-		employee.Email = emp.Email
-		employee.Phone = emp.PhoneNum
-		s.db.Save(&employee)
+		employee := database.Employee{
+			ID:       emp.ID,
+			FullName: emp.Name,
+			Email:    emp.Email,
+			Phone:    emp.PhoneNum,
+		}
+		s.db.Where("id = ?", emp.ID).FirstOrCreate(&employee)
 
 		// Сохранить / обновить месяц
 		monthModel := database.MonthlyData{
@@ -197,12 +196,17 @@ func (s *ReportService) SaveReportResults(data []domain.EmplCompleteData) error 
 			WorkedHours:    emp.WorkedTime,
 			LateHours:      emp.LateComeTime,
 			EarlyExitHours: emp.EarlyExitTime,
-			UniqueKey:      fmt.Sprintf("%s_%d_%d", employee.ID, year, mon),
 		}
-		s.db.Clauses(clause.OnConflict{
-			Columns:   []clause.Column{{Name: "unique_key"}},
-			DoUpdates: clause.AssignmentColumns([]string{"worked_hours", "late_hours", "early_exit_hours"}),
-		}).Create(&monthModel)
+
+		var existingMonth database.MonthlyData
+		s.db.Where("employee_id = ? AND year = ? AND month = ?",
+			employee.ID, year, mon).First(&existingMonth)
+
+		if existingMonth.ID == 0 {
+			s.db.Create(&monthModel)
+		} else {
+			s.db.Model(&existingMonth).Updates(monthModel)
+		}
 
 		// Сохранить / обновить ежедневные отметки
 		for _, d := range emp.DailyMarks {
@@ -212,15 +216,17 @@ func (s *ReportService) SaveReportResults(data []domain.EmplCompleteData) error 
 				WorkHours:  d.WorkingTime,
 				ComeTime:   d.ComingTime,
 				ExitTime:   d.ExitingTime,
-				UniqueKey:  fmt.Sprintf("%s_%s", employee.ID, d.Date),
 			}
 
-			s.db.Clauses(clause.OnConflict{
-				Columns:   []clause.Column{{Name: "unique_key"}},
-				DoUpdates: clause.AssignmentColumns([]string{"work_hours", "come_time", "exit_time"}),
-			}).Create(&daily)
+			var existingDaily database.DailyMark
+			s.db.Where("employee_id = ? AND date = ?", employee.ID, d.Date).First(&existingDaily)
+
+			if existingDaily.ID == 0 {
+				s.db.Create(&daily)
+			} else {
+				s.db.Model(&existingDaily).Updates(daily)
+			}
 		}
 	}
 
-	return nil
 }
