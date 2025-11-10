@@ -194,28 +194,22 @@ func (w *Window) createCompleteDataTable() {
 				w.showFilterMenu(id.Col)
 			}
 			if id.Row == 0 {
+				button.Show()
 				switch id.Col {
 				case 0:
 					label.SetText("ID")
-					button.Show()
 				case 1:
 					label.SetText("ФИО")
-					button.Show()
 				case 2:
 					label.SetText("Почта")
-					button.Show()
 				case 3:
 					label.SetText("Телефон")
-					button.Show()
 				case 4:
 					label.SetText("Отработанное время, ч")
-					button.Show()
 				case 5:
 					label.SetText("Опоздания, ч")
-					button.Show()
 				case 6:
 					label.SetText("Ранние уходы, ч")
-					button.Show()
 				default:
 					label.SetText((w.filteredDataSlice[id.Row].DailyMarks[id.Col-7].Date).Format("02.01.2006"))
 				}
